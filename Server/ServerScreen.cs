@@ -115,13 +115,14 @@ namespace ChatServer
         }
 
         // Handle register logic
+        // Handle register logic
         private void HandleRegister(TcpClient client, string data)
         {
             string[] parts = data.Split(':');
             string username = parts[1];
-            string passwordHash = parts[2];
+            string password = parts[2]; // Sử dụng mật khẩu thô
 
-            if (RegisterUser(username, passwordHash))
+            if (RegisterUser(username, password))
             {
                 SendMessage(client, "Register Success");
                 OnLogMessage?.Invoke($"User {username} registered successfully.");
@@ -133,8 +134,8 @@ namespace ChatServer
             }
         }
 
-        // Register a new user in the database
-        private bool RegisterUser(string username, string passwordHash)
+        // Đăng ký người dùng mà không mã hóa mật khẩu
+        private bool RegisterUser(string username, string password)
         {
             string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -142,11 +143,11 @@ namespace ChatServer
                 try
                 {
                     conn.Open();
-                    string query = "INSERT INTO Users (Username, PasswordHash) VALUES (@username, @passwordHash)";
+                    string query = "INSERT INTO Users (Username, Password) VALUES (@username, @password)";
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@username", username);
-                        cmd.Parameters.AddWithValue("@passwordHash", passwordHash);
+                        cmd.Parameters.AddWithValue("@password", password); // Không mã hóa mật khẩu nữa
 
                         int result = cmd.ExecuteNonQuery();
                         return result > 0;
@@ -159,6 +160,8 @@ namespace ChatServer
                 }
             }
         }
+
+
 
         // Authenticate user with the database
         private bool AuthenticateUser(string username, string password)
