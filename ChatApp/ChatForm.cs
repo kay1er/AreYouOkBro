@@ -73,15 +73,29 @@ namespace ChatClient
                 try
                 {
                     int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    string message = Encoding.ASCII.GetString(buffer, 0, byteCount);
+                    if (byteCount == 0)
+                    {
+                        // No data received; server might have closed the connection
+                        MessageBox.Show("Disconnected from the server.");
+                        break;
+                    }
 
+                    string message = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim();
+
+                    // Separate handling for USERLIST and chat messages
                     if (message.StartsWith("USERLIST:"))
                     {
+                        // Update user list without blinking effect on txtChatDisplay
                         UpdateUserList(message.Substring(9));
+                    }
+                    else if (message == $"Login Success{username}")
+                    {
+                        // Skip over the login success confirmation message
                     }
                     else
                     {
-                        Invoke((MethodInvoker)(() => txtChatDisplay.AppendText(message + "\n")));
+                        // Handle regular chat messages
+                        AppendMessageToChatDisplay(message);
                     }
                 }
                 catch (IOException)
@@ -96,6 +110,22 @@ namespace ChatClient
                 }
             }
         }
+
+        private void AppendMessageToChatDisplay(string message)
+        {
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)(() =>
+                {
+                    txtChatDisplay.AppendText(message + "\n");
+                }));
+            }
+            else
+            {
+                txtChatDisplay.AppendText(message + "\n");
+            }
+        }
+
 
         private void UpdateUserList(string userList)
         {
