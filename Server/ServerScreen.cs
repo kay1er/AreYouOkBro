@@ -115,12 +115,11 @@ namespace ChatServer
         }
 
         // Handle register logic
-        // Handle register logic
         private void HandleRegister(TcpClient client, string data)
         {
             string[] parts = data.Split(':');
             string username = parts[1];
-            string password = parts[2]; // Sử dụng mật khẩu thô
+            string password = parts[2]; // Mật khẩu thô (plaintext)
 
             if (RegisterUser(username, password))
             {
@@ -147,7 +146,7 @@ namespace ChatServer
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@username", username);
-                        cmd.Parameters.AddWithValue("@password", password); // Không mã hóa mật khẩu nữa
+                        cmd.Parameters.AddWithValue("@password", password); // Lưu mật khẩu thô vào cơ sở dữ liệu
 
                         int result = cmd.ExecuteNonQuery();
                         return result > 0;
@@ -161,25 +160,23 @@ namespace ChatServer
             }
         }
 
-
-
-        // Authenticate user with the database
+        // Xác thực người dùng với mật khẩu thô
         private bool AuthenticateUser(string username, string password)
         {
             string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT COUNT(1) FROM Users WHERE Username = @username AND PasswordHash = HASHBYTES('SHA2_256', @password)";
+                string query = "SELECT COUNT(1) FROM Users WHERE Username = @username AND Password = @password"; // So sánh mật khẩu thô
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@username", username);
-                cmd.Parameters.AddWithValue("@password", password);
+                cmd.Parameters.AddWithValue("@password", password); // Truyền mật khẩu thô vào câu lệnh SQL
 
                 return (int)cmd.ExecuteScalar() == 1;
             }
         }
 
-        // Send message back to the client
+        // Gửi thông điệp cho client
         private void SendMessage(TcpClient client, string message)
         {
             NetworkStream stream = client.GetStream();
@@ -187,17 +184,17 @@ namespace ChatServer
             stream.Write(data, 0, data.Length);
         }
 
-        // This method will handle the logging to the UI
+        // Phương thức để ghi log ra UI
         private void LogMessage(string message)
         {
-            // Ensure this runs on the UI thread
+            // Đảm bảo thực thi trên UI thread
             if (InvokeRequired)
             {
                 Invoke(new Action<string>(LogMessage), message);
             }
             else
             {
-                // Append the log message to the TextBox
+                // Thêm log vào TextBox
                 txtMessageLog.AppendText($"{message}{Environment.NewLine}");
             }
         }
