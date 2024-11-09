@@ -18,7 +18,7 @@ namespace ChatClient
             string username = txtUsername.Text;
             string password = txtPassword.Text;
 
-            using (TcpClient client = new TcpClient("192.168.1.99", 5000))
+            using (TcpClient client = new TcpClient("192.168.1.153", 5000))
             {
                 NetworkStream stream = client.GetStream();
 
