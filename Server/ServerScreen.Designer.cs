@@ -1,4 +1,4 @@
-﻿namespace Server
+﻿namespace ChatServer
 {
     partial class ServerScreen
     {
@@ -28,27 +28,28 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.txtMessageLog = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
-            // textBox1
+            // txtMessageLog
             // 
-            this.textBox1.Location = new System.Drawing.Point(44, 33);
-            this.textBox1.Multiline = true;
-            this.textBox1.Name = "textBox1";
-            this.textBox1.ReadOnly = true;
-            this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(441, 198);
-            this.textBox1.TabIndex = 0;
+            this.txtMessageLog.Location = new System.Drawing.Point(58, 51);
+            this.txtMessageLog.Multiline = true;
+            this.txtMessageLog.Name = "txtMessageLog";
+            this.txtMessageLog.ReadOnly = true;
+            this.txtMessageLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtMessageLog.Size = new System.Drawing.Size(399, 303);
+            this.txtMessageLog.TabIndex = 0;
             // 
             // ServerScreen
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(535, 282);
-            this.Controls.Add(this.textBox1);
+            this.ClientSize = new System.Drawing.Size(527, 450);
+            this.Controls.Add(this.txtMessageLog);
             this.Name = "ServerScreen";
-            this.Text = "Form1";
+            this.Text = "ServerScreen";
+            this.Load += new System.EventHandler(this.ServerScreen_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -56,7 +57,6 @@
 
         #endregion
 
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox txtMessageLog;
     }
 }
-

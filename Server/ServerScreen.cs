@@ -1,67 +1,139 @@
-﻿using System.Data.SqlClient;
-using System.Net.Sockets;
+﻿using System;
+using System.Data.SqlClient;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
-using System;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ChatServer
 {
-    class Server
+    public partial class ServerScreen : Form
     {
         private TcpListener listener;
+        private bool isRunning;
 
-        public void StartServer()
+        public event Action<string> OnLogMessage; // Event to log messages to the UI
+
+        public ServerScreen()
+        {
+            InitializeComponent();
+            // Subscribe to the log message event to display logs in the TextBox
+            OnLogMessage += LogMessage;
+        }
+
+        // This method starts the server when the form is loaded
+        private void ServerScreen_Load(object sender, EventArgs e)
+        {
+            StartServer();
+        }
+
+        // This method stops the server when the form is closing
+        private void ServerScreen_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            StopServer();
+        }
+
+        // Method to start the server
+        private void StartServer()
         {
             listener = new TcpListener(IPAddress.Any, 5000);
             listener.Start();
-            Console.WriteLine("Server started...");
+            isRunning = true;
+            OnLogMessage?.Invoke("Server started...");
 
-            while (true)
+            // Handle client connections asynchronously
+            Task.Run(() =>
             {
-                TcpClient client = listener.AcceptTcpClient();
-                HandleClient(client);
-            }
+                while (isRunning)
+                {
+                    try
+                    {
+                        TcpClient client = listener.AcceptTcpClient();
+                        Task.Run(() => HandleClient(client));
+                    }
+                    catch (Exception ex)
+                    {
+                        OnLogMessage?.Invoke($"Error accepting client: {ex.Message}");
+                    }
+                }
+            });
         }
 
+        // Method to stop the server
+        private void StopServer()
+        {
+            isRunning = false;
+            listener?.Stop();
+            OnLogMessage?.Invoke("Server stopped.");
+        }
+
+        // Handle the client request for login or register
         private void HandleClient(TcpClient client)
         {
-            NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
-            int byteCount = stream.Read(buffer, 0, buffer.Length);
-            string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
-
-            if (data.StartsWith("LOGIN:"))
+            try
             {
-                string[] parts = data.Split(':');
-                string username = parts[1];
-                string password = parts[2];
+                NetworkStream stream = client.GetStream();
+                byte[] buffer = new byte[1024];
+                int byteCount = stream.Read(buffer, 0, buffer.Length);
+                string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
 
-                if (AuthenticateUser(username, password))
+                if (data.StartsWith("LOGIN:"))
                 {
-                    SendMessage(client, "Login Success");
+                    HandleLogin(client, data);
                 }
-                else
+                else if (data.StartsWith("REGISTER:"))
                 {
-                    SendMessage(client, "Login Failed");
+                    HandleRegister(client, data);
                 }
+
+                client.Close();
             }
-            else if (data.StartsWith("REGISTER:"))
+            catch (Exception ex)
             {
-                string[] parts = data.Split(':');
-                string username = parts[1];
-                string passwordHash = parts[2];
-
-                if (RegisterUser(username, passwordHash))
-                {
-                    SendMessage(client, "Register Success");
-                }
-                else
-                {
-                    SendMessage(client, "Register Failed");
-                }
+                OnLogMessage?.Invoke($"Error handling client: {ex.Message}");
             }
         }
 
+        // Handle login logic
+        private void HandleLogin(TcpClient client, string data)
+        {
+            string[] parts = data.Split(':');
+            string username = parts[1];
+            string password = parts[2];
+
+            if (AuthenticateUser(username, password))
+            {
+                SendMessage(client, "Login Success");
+                OnLogMessage?.Invoke($"User {username} logged in successfully.");
+            }
+            else
+            {
+                SendMessage(client, "Login Failed");
+                OnLogMessage?.Invoke($"Login failed for user {username}.");
+            }
+        }
+
+        // Handle register logic
+        private void HandleRegister(TcpClient client, string data)
+        {
+            string[] parts = data.Split(':');
+            string username = parts[1];
+            string passwordHash = parts[2];
+
+            if (RegisterUser(username, passwordHash))
+            {
+                SendMessage(client, "Register Success");
+                OnLogMessage?.Invoke($"User {username} registered successfully.");
+            }
+            else
+            {
+                SendMessage(client, "Register Failed");
+                OnLogMessage?.Invoke($"Registration failed for user {username}.");
+            }
+        }
+
+        // Register a new user in the database
         private bool RegisterUser(string username, string passwordHash)
         {
             string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
@@ -80,14 +152,15 @@ namespace ChatServer
                         return result > 0;
                     }
                 }
-                catch (SqlException)
+                catch (SqlException ex)
                 {
+                    OnLogMessage?.Invoke("Error: " + ex.Message);
                     return false;
                 }
             }
         }
 
-
+        // Authenticate user with the database
         private bool AuthenticateUser(string username, string password)
         {
             string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
@@ -103,11 +176,27 @@ namespace ChatServer
             }
         }
 
+        // Send message back to the client
         private void SendMessage(TcpClient client, string message)
         {
             NetworkStream stream = client.GetStream();
             byte[] data = Encoding.ASCII.GetBytes(message);
             stream.Write(data, 0, data.Length);
+        }
+
+        // This method will handle the logging to the UI
+        private void LogMessage(string message)
+        {
+            // Ensure this runs on the UI thread
+            if (InvokeRequired)
+            {
+                Invoke(new Action<string>(LogMessage), message);
+            }
+            else
+            {
+                // Append the log message to the TextBox
+                txtMessageLog.AppendText($"{message}{Environment.NewLine}");
+            }
         }
     }
 }

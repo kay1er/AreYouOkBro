@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿
+using System;
 using System.Windows.Forms;
+using ChatServer;
 
-namespace Server
+namespace ChatServer
 {
     internal static class Program
     {
@@ -16,7 +15,7 @@ namespace Server
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ServerScreen());
+            Application.Run(new ChatServer.ServerScreen());
         }
     }
 }
