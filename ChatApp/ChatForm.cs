@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,9 @@ namespace ChatClient
             this.username = username;
             client = new TcpClient("192.168.1.99", 5000);
             stream = client.GetStream();
+
+            // Notify server of login
+            SendMessage($"LOGIN:{username}");
         }
 
         private void ChatForm_Load(object sender, EventArgs e)
@@ -29,15 +33,36 @@ namespace ChatClient
         {
             string message = txtChatInput.Text;
             SendMessage($"{username}: {message}");
+            txtChatDisplay.AppendText($"{username}: {message}\n");
             txtChatInput.Clear();
         }
 
         private void SendMessage(string message)
         {
-            byte[] data = Encoding.ASCII.GetBytes(message);
-            stream.Write(data, 0, data.Length);
-            txtChatDisplay.AppendText($"{message}{Environment.NewLine}");
+            try
+            {
+                if (client.Connected) // Kiểm tra kết nối trước khi gửi
+                {
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+                else
+                {
+                    MessageBox.Show("Connection to the server has been lost.");
+                    this.Close(); // Đóng ứng dụng nếu không thể kết nối
+                }
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show($"Error sending message: {ex.Message}");
+                // Thực hiện các hành động phục hồi ở đây, ví dụ: đóng kết nối và thoát ứng dụng
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An unexpected error occurred: {ex.Message}");
+            }
         }
+
 
         private async Task ReceiveMessages()
         {
@@ -45,11 +70,37 @@ namespace ChatClient
             while (true)
             {
                 int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (byteCount == 0) continue; // No data received, skip
                 string message = Encoding.ASCII.GetString(buffer, 0, byteCount);
 
-                Invoke((MethodInvoker)(() => txtChatDisplay.AppendText($"{message}{Environment.NewLine}")));
+                if (message.StartsWith("USERLIST:"))
+                {
+                    UpdateUserList(message.Substring(9));
+                }
+                else
+                {
+                    Invoke((MethodInvoker)(() => txtChatDisplay.AppendText(message + "\n")));
+                }
             }
+        }
+
+        private void UpdateUserList(string userList)
+        {
+            Invoke((MethodInvoker)(() =>
+            {
+                cmbUsers.Items.Clear();
+                string[] users = userList.Split(',');
+                foreach (string user in users)
+                {
+                    if (user != username) // Don't show the current user
+                        cmbUsers.Items.Add(user);
+                }
+            }));
+        }
+
+        private void ChatForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SendMessage($"LOGOUT:{username}");
+            client.Close();
         }
     }
 }

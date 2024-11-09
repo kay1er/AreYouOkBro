@@ -13,29 +13,26 @@ namespace ChatServer
     {
         private TcpListener listener;
         private bool isRunning;
-        private List<TcpClient> clients = new List<TcpClient>();
-        public event Action<string> OnLogMessage; // Event to log messages to the UI
+        private Dictionary<string, TcpClient> connectedClients = new Dictionary<string, TcpClient>();
+
+        public event Action<string> OnLogMessage;
 
         public ServerScreen()
         {
             InitializeComponent();
-            // Subscribe to the log message event to display logs in the TextBox
-            OnLogMessage += LogMessage;
+            OnLogMessage += LogMessage; // Đăng ký sự kiện ghi nhật ký
         }
 
-        // This method starts the server when the form is loaded
         private void ServerScreen_Load(object sender, EventArgs e)
         {
-            StartServer();
+            StartServer(); // Khởi động server khi form load
         }
 
-        // This method stops the server when the form is closing
         private void ServerScreen_FormClosing(object sender, FormClosingEventArgs e)
         {
-            StopServer();
+            StopServer(); // Dừng server khi form đóng
         }
 
-        // Method to start the server
         private void StartServer()
         {
             listener = new TcpListener(IPAddress.Any, 5000);
@@ -43,7 +40,6 @@ namespace ChatServer
             isRunning = true;
             OnLogMessage?.Invoke("Server started...");
 
-            // Handle client connections asynchronously
             Task.Run(() =>
             {
                 while (isRunning)
@@ -51,7 +47,7 @@ namespace ChatServer
                     try
                     {
                         TcpClient client = listener.AcceptTcpClient();
-                        Task.Run(() => HandleClient(client));
+                        Task.Run(() => HandleClient(client)); // Xử lý kết nối client
                     }
                     catch (Exception ex)
                     {
@@ -61,7 +57,6 @@ namespace ChatServer
             });
         }
 
-        // Method to stop the server
         private void StopServer()
         {
             isRunning = false;
@@ -69,7 +64,6 @@ namespace ChatServer
             OnLogMessage?.Invoke("Server stopped.");
         }
 
-        // Handle the client request for login or register
         private void HandleClient(TcpClient client)
         {
             try
@@ -78,7 +72,9 @@ namespace ChatServer
                 byte[] buffer = new byte[1024];
                 int byteCount = stream.Read(buffer, 0, buffer.Length);
                 string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
+                OnLogMessage?.Invoke($"Received data from client: {data}"); // Ghi nhật ký dữ liệu nhận được
 
+                // Phân loại các loại yêu cầu từ client
                 if (data.StartsWith("LOGIN:"))
                 {
                     HandleLogin(client, data);
@@ -87,9 +83,13 @@ namespace ChatServer
                 {
                     HandleRegister(client, data);
                 }
+                else if (data.StartsWith("LOGOUT:"))
+                {
+                    HandleLogout(client);
+                }
                 else
                 {
-                    BroadcastMessage(data, client);
+                    BroadcastMessage(data, client); // Gửi tin nhắn tới các client khác
                 }
             }
             catch (Exception ex)
@@ -98,35 +98,32 @@ namespace ChatServer
             }
             finally
             {
-                client.Close();
-                clients.Remove(client); // Remove the client from the list when disconnected
+                client.Close(); // Đóng kết nối client sau khi xử lý xong
             }
         }
-        private void BroadcastMessage(string message, TcpClient sender)
-        {
-            foreach (var client in clients)
-            {
-                if (client != sender) // Don't send the message back to the sender
-                {
-                    NetworkStream stream = client.GetStream();
-                    byte[] data = Encoding.ASCII.GetBytes(message);
-                    stream.Write(data, 0, data.Length);
-                }
-            }
 
-            OnLogMessage?.Invoke("Broadcasting message: " + message);
-        }
-        // Handle login logic
+        // Xử lý đăng nhập
         private void HandleLogin(TcpClient client, string data)
         {
             string[] parts = data.Split(':');
+
+            // Kiểm tra nếu có ít nhất 2 phần (LOGIN và username), mật khẩu có thể không có
+            if (parts.Length < 2 || parts.Length > 3)
+            {
+                SendMessage(client, "Invalid login format. Please use the format: LOGIN:username:password (password optional)");
+                OnLogMessage?.Invoke($"Invalid login format: {data}");
+                return;
+            }
+
             string username = parts[1];
-            string password = parts[2];
+            string password = parts.Length == 3 ? parts[2] : null; // Nếu có mật khẩu, lấy mật khẩu, nếu không thì null
 
             if (AuthenticateUser(username, password))
             {
+                connectedClients[username] = client;
                 SendMessage(client, "Login Success");
                 OnLogMessage?.Invoke($"User {username} logged in successfully.");
+                BroadcastUserList();
             }
             else
             {
@@ -135,12 +132,15 @@ namespace ChatServer
             }
         }
 
-        // Handle register logic
+
+
+
+        // Xử lý đăng ký
         private void HandleRegister(TcpClient client, string data)
         {
             string[] parts = data.Split(':');
             string username = parts[1];
-            string password = parts[2]; // Mật khẩu thô (plaintext)
+            string password = parts[2];
 
             if (RegisterUser(username, password))
             {
@@ -154,58 +154,162 @@ namespace ChatServer
             }
         }
 
-        // Đăng ký người dùng mà không mã hóa mật khẩu
-        private bool RegisterUser(string username, string password)
+        // Xử lý đăng xuất
+        private void HandleLogout(TcpClient client)
         {
-            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            string username = GetUsername(client);
+            if (username != null)
             {
-                try
-                {
-                    conn.Open();
-                    string query = "INSERT INTO Users (Username, Password) VALUES (@username, @password)";
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@username", username);
-                        cmd.Parameters.AddWithValue("@password", password); // Lưu mật khẩu thô vào cơ sở dữ liệu
-
-                        int result = cmd.ExecuteNonQuery();
-                        return result > 0;
-                    }
-                }
-                catch (SqlException ex)
-                {
-                    OnLogMessage?.Invoke("Error: " + ex.Message);
-                    return false;
-                }
+                connectedClients.Remove(username);
+                BroadcastUserList(); // Cập nhật danh sách người dùng
+                OnLogMessage?.Invoke($"User {username} logged out.");
             }
         }
 
-        // Xác thực người dùng với mật khẩu thô
+        // Kiểm tra đăng nhập người dùng
         private bool AuthenticateUser(string username, string password)
         {
             string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT COUNT(1) FROM Users WHERE Username = @username AND Password = @password"; // So sánh mật khẩu thô
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@username", username);
-                cmd.Parameters.AddWithValue("@password", password); // Truyền mật khẩu thô vào câu lệnh SQL
+                OnLogMessage?.Invoke("Connected to database for authentication."); // Kiểm tra kết nối
 
-                return (int)cmd.ExecuteScalar() == 1;
+                string query;
+                SqlCommand cmd;
+
+                if (string.IsNullOrEmpty(password)) // Nếu không có mật khẩu, chỉ kiểm tra username
+                {
+                    query = "SELECT COUNT(1) FROM Users WHERE Username = @username";
+                    cmd = new SqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@username", username);
+                }
+                else // Nếu có mật khẩu, kiểm tra cả username và password
+                {
+                    query = "SELECT COUNT(1) FROM Users WHERE Username = @username AND Password = @password";
+                    cmd = new SqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@password", password);
+                }
+
+                int result = (int)cmd.ExecuteScalar();
+                OnLogMessage?.Invoke($"Authentication result: {result}"); // Kiểm tra kết quả
+
+                return result == 1;
             }
         }
 
-        // Gửi thông điệp cho client
-        private void SendMessage(TcpClient client, string message)
+
+        // Xử lý đăng ký người dùng mới
+        private bool RegisterUser(string username, string password)
         {
-            NetworkStream stream = client.GetStream();
-            byte[] data = Encoding.ASCII.GetBytes(message);
-            stream.Write(data, 0, data.Length);
+            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                string query = "INSERT INTO Users (Username, Password) VALUES (@username, @password)";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@password", password);
+
+                    int result = cmd.ExecuteNonQuery();
+                    return result > 0;
+                }
+            }
         }
 
-        // Phương thức để ghi log ra UI
+        // Gửi tin nhắn tới client
+        private void SendMessage(TcpClient client, string message)
+        {
+            try
+            {
+                if (client.Connected)  // Kiểm tra xem client còn kết nối không
+                {
+                    NetworkStream stream = client.GetStream();
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+                else
+                {
+                    OnLogMessage?.Invoke($"Client {client.Client.RemoteEndPoint} disconnected.");
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                OnLogMessage?.Invoke("Tried to send message to a disposed client.");
+            }
+            catch (Exception ex)
+            {
+                OnLogMessage?.Invoke($"Error sending message: {ex.Message}");
+            }
+        }
+
+
+        // Phát tin nhắn tới tất cả các client ngoại trừ client gửi
+        private void BroadcastMessage(string message, TcpClient sender)
+        {
+            foreach (var client in connectedClients.Values)
+            {
+                if (client != sender)
+                {
+                    SendMessage(client, message);
+                }
+            }
+            OnLogMessage?.Invoke("Broadcasting message: " + message);
+        }
+
+        // Cập nhật danh sách người dùng online
+        private void BroadcastUserList()
+        {
+            string userList = "USERLIST:" + string.Join(",", connectedClients.Keys);
+            List<TcpClient> clientsToRemove = new List<TcpClient>(); // Danh sách các client sẽ bị xóa
+
+            foreach (var client in connectedClients.Values)
+            {
+                try
+                {
+                    // Kiểm tra kết nối client trước khi gửi tin nhắn
+                    if (client.Connected)
+                    {
+                        SendMessage(client, userList);
+                    }
+                    else
+                    {
+                        clientsToRemove.Add(client); // Thêm client vào danh sách cần xóa
+                    }
+                }
+                catch (Exception ex)
+                {
+                    OnLogMessage?.Invoke($"Error sending message to client: {ex.Message}");
+                }
+            }
+
+            // Xóa những client không còn kết nối
+            foreach (var client in clientsToRemove)
+            {
+                string username = GetUsername(client);
+                if (username != null)
+                {
+                    connectedClients.Remove(username);
+                }
+            }
+
+            OnLogMessage?.Invoke("Updated user list broadcasted.");
+        }
+
+
+        // Lấy tên người dùng từ kết nối
+        private string GetUsername(TcpClient client)
+        {
+            foreach (var entry in connectedClients)
+            {
+                if (entry.Value == client) return entry.Key;
+            }
+            return null;
+        }
+
+        // Ghi nhật ký vào giao diện
         private void LogMessage(string message)
         {
             if (InvokeRequired)
