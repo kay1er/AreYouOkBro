@@ -16,7 +16,7 @@ namespace ChatClient
         {
             InitializeComponent();
             this.username = username;
-            client = new TcpClient("192.168.1.153", 5000);
+            client = new TcpClient("192.168.1.99", 5000);
             stream = client.GetStream();
         }
 
@@ -28,10 +28,15 @@ namespace ChatClient
         private void btnSend_Click(object sender, EventArgs e)
         {
             string message = txtChatInput.Text;
-            byte[] data = Encoding.ASCII.GetBytes($"{username}: {message}");
-            stream.Write(data, 0, data.Length);
-            txtChatDisplay.AppendText($"{username}: {message}\n");
+            SendMessage($"{username}: {message}");
             txtChatInput.Clear();
+        }
+
+        private void SendMessage(string message)
+        {
+            byte[] data = Encoding.ASCII.GetBytes(message);
+            stream.Write(data, 0, data.Length);
+            txtChatDisplay.AppendText($"{message}{Environment.NewLine}");
         }
 
         private async Task ReceiveMessages()
@@ -40,8 +45,10 @@ namespace ChatClient
             while (true)
             {
                 int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (byteCount == 0) continue; // No data received, skip
                 string message = Encoding.ASCII.GetString(buffer, 0, byteCount);
-                Invoke((MethodInvoker)(() => txtChatDisplay.AppendText(message + "\n")));
+
+                Invoke((MethodInvoker)(() => txtChatDisplay.AppendText($"{message}{Environment.NewLine}")));
             }
         }
     }

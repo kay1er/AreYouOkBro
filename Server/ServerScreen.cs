@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
 using System.Net.Sockets;
@@ -12,7 +13,7 @@ namespace ChatServer
     {
         private TcpListener listener;
         private bool isRunning;
-
+        private List<TcpClient> clients = new List<TcpClient>();
         public event Action<string> OnLogMessage; // Event to log messages to the UI
 
         public ServerScreen()
@@ -86,15 +87,35 @@ namespace ChatServer
                 {
                     HandleRegister(client, data);
                 }
-
-                client.Close();
+                else
+                {
+                    BroadcastMessage(data, client);
+                }
             }
             catch (Exception ex)
             {
                 OnLogMessage?.Invoke($"Error handling client: {ex.Message}");
             }
+            finally
+            {
+                client.Close();
+                clients.Remove(client); // Remove the client from the list when disconnected
+            }
         }
+        private void BroadcastMessage(string message, TcpClient sender)
+        {
+            foreach (var client in clients)
+            {
+                if (client != sender) // Don't send the message back to the sender
+                {
+                    NetworkStream stream = client.GetStream();
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+            }
 
+            OnLogMessage?.Invoke("Broadcasting message: " + message);
+        }
         // Handle login logic
         private void HandleLogin(TcpClient client, string data)
         {
@@ -187,14 +208,12 @@ namespace ChatServer
         // Phương thức để ghi log ra UI
         private void LogMessage(string message)
         {
-            // Đảm bảo thực thi trên UI thread
             if (InvokeRequired)
             {
                 Invoke(new Action<string>(LogMessage), message);
             }
             else
             {
-                // Thêm log vào TextBox
                 txtMessageLog.AppendText($"{message}{Environment.NewLine}");
             }
         }

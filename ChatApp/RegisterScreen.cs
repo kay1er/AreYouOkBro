@@ -35,7 +35,7 @@ namespace ChatApp
         {
             try
             {
-                using (TcpClient client = new TcpClient("192.168.1.153", 5000))
+                using (TcpClient client = new TcpClient("192.168.1.99", 5000))
                 {
                     NetworkStream stream = client.GetStream();
                     string message = $"REGISTER:{username}:{password}"; // Sử dụng mật khẩu thô
