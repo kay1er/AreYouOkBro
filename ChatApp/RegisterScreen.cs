@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 
@@ -18,10 +17,10 @@ namespace ChatApp
             string username = txtUsername.Text;
             string password = txtPassword.Text;
 
-            // Hash the password
-            string passwordHash = ComputeSha256Hash(password);
+            // Không mã hóa mật khẩu nữa, chỉ sử dụng mật khẩu thô
+            string passwordPlaintext = password;
 
-            if (SendRegisterRequest(username, passwordHash))
+            if (SendRegisterRequest(username, passwordPlaintext))
             {
                 MessageBox.Show("Registration successful!");
                 this.Close();
@@ -32,29 +31,14 @@ namespace ChatApp
             }
         }
 
-        private string ComputeSha256Hash(string rawData)
-        {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-
-                StringBuilder builder = new StringBuilder();
-                foreach (byte b in bytes)
-                {
-                    builder.Append(b.ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
-
-        private bool SendRegisterRequest(string username, string passwordHash)
+        private bool SendRegisterRequest(string username, string password)
         {
             try
             {
                 using (TcpClient client = new TcpClient("192.168.1.153", 5000))
                 {
                     NetworkStream stream = client.GetStream();
-                    string message = $"REGISTER:{username}:{passwordHash}";
+                    string message = $"REGISTER:{username}:{password}"; // Sử dụng mật khẩu thô
                     byte[] data = Encoding.ASCII.GetBytes(message);
                     stream.Write(data, 0, data.Length);
 
