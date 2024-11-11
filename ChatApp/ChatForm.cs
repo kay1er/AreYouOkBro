@@ -117,12 +117,14 @@ namespace ChatClient
             {
                 Invoke((MethodInvoker)(() =>
                 {
-                    txtChatDisplay.AppendText(message + "\n");
+                    txtChatDisplay.AppendText(message + Environment.NewLine);
+
                 }));
             }
             else
             {
-                txtChatDisplay.AppendText(message + "\n");
+                txtChatDisplay.AppendText(message + Environment.NewLine);
+
             }
         }
 

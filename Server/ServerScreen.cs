@@ -70,26 +70,29 @@ namespace ChatServer
             {
                 NetworkStream stream = client.GetStream();
                 byte[] buffer = new byte[1024];
-                int byteCount = stream.Read(buffer, 0, buffer.Length);
-                string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
-                OnLogMessage?.Invoke($"Received data from client: {data}"); // Ghi nhật ký dữ liệu nhận được
+                int byteCount;
 
-                // Phân loại các loại yêu cầu từ client
-                if (data.StartsWith("LOGIN:"))
+                while ((byteCount = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    HandleLogin(client, data);
-                }
-                else if (data.StartsWith("REGISTER:"))
-                {
-                    HandleRegister(client, data);
-                }
-                else if (data.StartsWith("LOGOUT:"))
-                {
-                    HandleLogout(client);
-                }
-                else
-                {
-                    BroadcastMessage(data, client); // Gửi tin nhắn tới các client khác
+                    string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
+                    OnLogMessage?.Invoke($"Received data from client: {data}"); // Log incoming data
+
+                    if (data.StartsWith("LOGIN:"))
+                    {
+                        HandleLogin(client, data);
+                    }
+                    else if (data.StartsWith("REGISTER:"))
+                    {
+                        HandleRegister(client, data);
+                    }
+                    else if (data.StartsWith("LOGOUT:"))
+                    {
+                        HandleLogout(client);
+                    }
+                    else
+                    {
+                        BroadcastMessage(data, client); // Broadcast the message to other clients
+                    }
                 }
             }
             catch (Exception ex)
@@ -98,9 +101,10 @@ namespace ChatServer
             }
             finally
             {
-                client.Close(); // Đóng kết nối client sau khi xử lý xong
+                client.Close(); // Close the client connection after handling
             }
         }
+
 
         // Xử lý đăng nhập
         private void HandleLogin(TcpClient client, string data)
@@ -247,17 +251,28 @@ namespace ChatServer
 
 
         // Phát tin nhắn tới tất cả các client ngoại trừ client gửi
+        // Broadcast a message to all clients except the sender
         private void BroadcastMessage(string message, TcpClient sender)
         {
+            byte[] buffer = Encoding.UTF8.GetBytes(message);
             foreach (var client in connectedClients.Values)
             {
-                if (client != sender)
+                if (client != sender && client.Connected)
                 {
-                    SendMessage(client, message);
+                    try
+                    {
+                        NetworkStream stream = client.GetStream();
+                        stream.Write(buffer, 0, buffer.Length);
+                    }
+                    catch (Exception ex)
+                    {
+                        OnLogMessage?.Invoke($"Error sending broadcast message: {ex.Message}");
+                    }
                 }
             }
             OnLogMessage?.Invoke("Broadcasting message: " + message);
         }
+
 
         // Cập nhật danh sách người dùng online
         private void BroadcastUserList()
