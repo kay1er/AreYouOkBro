@@ -34,11 +34,25 @@ namespace ChatClient
             string message = txtChatInput.Text.Trim();
             if (!string.IsNullOrEmpty(message))
             {
-                SendMessage($"{username}: {message}");
-                txtChatDisplay.AppendText($"{username}: {message}\n");
+                string selectedUser = cmbUsers.SelectedItem?.ToString();
+
+                if (!string.IsNullOrEmpty(selectedUser))
+                {
+                    // Send private message to selected user
+                    SendMessage($"PRIVATE:{selectedUser}:{message}");
+                    txtChatDisplay.AppendText($"To {selectedUser}: {message}" + Environment.NewLine);
+                }
+                else
+                {
+                    // Send public message if no user is selected
+                    SendMessage($"{username}: {message}");
+                    txtChatDisplay.AppendText($"{username}: {message}" + Environment.NewLine);
+                }
+
                 txtChatInput.Clear();
             }
         }
+
 
         private void SendMessage(string message)
         {
@@ -134,14 +148,19 @@ namespace ChatClient
             Invoke((MethodInvoker)(() =>
             {
                 cmbUsers.Items.Clear();
-                string[] users = userList.Split(',');
+                // Split by commas and remove any empty or whitespace entries
+                string[] users = userList.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string user in users)
                 {
-                    if (user != username) // Don't show the current user
-                        cmbUsers.Items.Add(user);
+                    string trimmedUser = user.Trim();
+                    if (!string.IsNullOrEmpty(trimmedUser) && trimmedUser != username) // Don't show the current user
+                    {
+                        cmbUsers.Items.Add(trimmedUser);
+                    }
                 }
             }));
         }
+
 
         private void ChatForm_FormClosing(object sender, FormClosingEventArgs e)
         {

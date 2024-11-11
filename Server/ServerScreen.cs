@@ -252,8 +252,23 @@ namespace ChatServer
 
         // Phát tin nhắn tới tất cả các client ngoại trừ client gửi
         // Broadcast a message to all clients except the sender
+        // Modify the BroadcastMessage method to handle both private and public messages.
         private void BroadcastMessage(string message, TcpClient sender)
         {
+            // Check if the message is a private message by checking the prefix.
+            if (message.StartsWith("PRIVATE:"))
+            {
+                string[] parts = message.Split(new[] { ':' }, 3);
+                if (parts.Length == 3)
+                {
+                    string recipient = parts[1];
+                    string privateMessage = parts[2];
+                    SendPrivateMessage(privateMessage, sender, recipient);
+                    return;
+                }
+            }
+
+            // Handle public message by broadcasting to all clients except the sender.
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             foreach (var client in connectedClients.Values)
             {
@@ -272,6 +287,35 @@ namespace ChatServer
             }
             OnLogMessage?.Invoke("Broadcasting message: " + message);
         }
+
+        // Method to send a private message to a specific recipient
+        private void SendPrivateMessage(string message, TcpClient sender, string recipient)
+        {
+            if (connectedClients.TryGetValue(recipient, out TcpClient recipientClient) && recipientClient.Connected)
+            {
+                string senderName = GetUsername(sender);
+                string formattedMessage = $"PRIVATE FROM {senderName}: {message}";
+                byte[] buffer = Encoding.UTF8.GetBytes(formattedMessage);
+
+                try
+                {
+                    NetworkStream stream = recipientClient.GetStream();
+                    stream.Write(buffer, 0, buffer.Length);
+                    OnLogMessage?.Invoke($"Private message from {senderName} to {recipient}: {message}");
+                }
+                catch (Exception ex)
+                {
+                    OnLogMessage?.Invoke($"Error sending private message: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Notify sender if the recipient is not found or disconnected
+                SendMessage(sender, $"User {recipient} is not available.");
+                OnLogMessage?.Invoke($"User {recipient} is not available for private messages.");
+            }
+        }
+
 
 
         // Cập nhật danh sách người dùng online
