@@ -37,25 +37,28 @@
             // 
             // txtChatInput
             // 
-            this.txtChatInput.Location = new System.Drawing.Point(48, 251);
+            this.txtChatInput.Location = new System.Drawing.Point(64, 309);
+            this.txtChatInput.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.txtChatInput.Name = "txtChatInput";
-            this.txtChatInput.Size = new System.Drawing.Size(385, 20);
+            this.txtChatInput.Size = new System.Drawing.Size(512, 22);
             this.txtChatInput.TabIndex = 0;
             // 
             // txtChatDisplay
             // 
-            this.txtChatDisplay.Location = new System.Drawing.Point(48, 47);
+            this.txtChatDisplay.Location = new System.Drawing.Point(64, 58);
+            this.txtChatDisplay.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.txtChatDisplay.Multiline = true;
             this.txtChatDisplay.Name = "txtChatDisplay";
             this.txtChatDisplay.ReadOnly = true;
-            this.txtChatDisplay.Size = new System.Drawing.Size(385, 198);
+            this.txtChatDisplay.Size = new System.Drawing.Size(512, 243);
             this.txtChatDisplay.TabIndex = 1;
             // 
             // btnSend
             // 
-            this.btnSend.Location = new System.Drawing.Point(358, 277);
+            this.btnSend.Location = new System.Drawing.Point(477, 341);
+            this.btnSend.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(75, 23);
+            this.btnSend.Size = new System.Drawing.Size(100, 28);
             this.btnSend.TabIndex = 2;
             this.btnSend.Text = "Send";
             this.btnSend.UseVisualStyleBackColor = true;
@@ -64,32 +67,31 @@
             // cmbUsers
             // 
             this.cmbUsers.FormattingEnabled = true;
-            this.cmbUsers.Location = new System.Drawing.Point(52, 22);
-            this.cmbUsers.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.cmbUsers.Location = new System.Drawing.Point(69, 27);
             this.cmbUsers.Name = "cmbUsers";
-            this.cmbUsers.Size = new System.Drawing.Size(106, 21);
+            this.cmbUsers.Size = new System.Drawing.Size(140, 24);
             this.cmbUsers.TabIndex = 3;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(9, 24);
-            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label1.Location = new System.Drawing.Point(12, 30);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(43, 13);
+            this.label1.Size = new System.Drawing.Size(51, 16);
             this.label1.TabIndex = 4;
             this.label1.Text = "Online: ";
             // 
             // ChatForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(485, 343);
+            this.ClientSize = new System.Drawing.Size(647, 422);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.cmbUsers);
             this.Controls.Add(this.btnSend);
             this.Controls.Add(this.txtChatDisplay);
             this.Controls.Add(this.txtChatInput);
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "ChatForm";
             this.Text = "ChatScreen";
             this.Load += new System.EventHandler(this.ChatForm_Load);

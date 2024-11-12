@@ -17,15 +17,16 @@ namespace ChatClient
         {
             InitializeComponent();
             this.username = username;
-            client = new TcpClient("192.168.1.153", 5000);
-            stream = client.GetStream();
+            client = new TcpClient("172.20.10.2", 8888); // Kết nối tới server cục bộ tại cổng 5000
+            stream = client.GetStream(); // Tạo luồng stream từ TcpClient
 
-            // Notify server of login
+            // Thông báo cho server biết người dùng đã đăng nhập
             SendMessage($"LOGIN:{username}");
         }
 
         private void ChatForm_Load(object sender, EventArgs e)
         {
+            // Tạo một task mới để xử lý nhận tin nhắn từ server
             Task.Run(() => ReceiveMessages());
         }
 
@@ -38,21 +39,20 @@ namespace ChatClient
 
                 if (!string.IsNullOrEmpty(selectedUser))
                 {
-                    // Send private message to selected user
+                    // Gửi tin nhắn riêng tư đến người dùng đã chọn
                     SendMessage($"PRIVATE:{selectedUser}:{message}");
                     txtChatDisplay.AppendText($"To {selectedUser}: {message}" + Environment.NewLine);
                 }
                 else
                 {
-                    // Send public message if no user is selected
+                    // Gửi tin nhắn công khai nếu không có người dùng nào được chọn
                     SendMessage($"{username}: {message}");
                     txtChatDisplay.AppendText($"{username}: {message}" + Environment.NewLine);
                 }
 
-                txtChatInput.Clear();
+                txtChatInput.Clear(); // Xóa nội dung hộp nhập sau khi gửi tin nhắn
             }
         }
-
 
         private void SendMessage(string message)
         {
@@ -60,17 +60,20 @@ namespace ChatClient
             {
                 if (client.Connected)
                 {
+                    // Mã hóa tin nhắn thành byte và gửi qua stream
                     byte[] data = Encoding.ASCII.GetBytes(message);
                     stream.Write(data, 0, data.Length);
                 }
                 else
                 {
+                    // Thông báo lỗi nếu kết nối đến server đã mất
                     MessageBox.Show("Connection to the server has been lost.");
                     this.Close();
                 }
             }
             catch (IOException ex)
             {
+                // Hiển thị thông báo lỗi khi gặp sự cố gửi tin nhắn
                 MessageBox.Show($"Error sending message: {ex.Message}");
             }
             catch (Exception ex)
@@ -89,17 +92,16 @@ namespace ChatClient
                     int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
                     if (byteCount == 0)
                     {
-                        // No data received; server might have closed the connection
+                        // Không nhận được dữ liệu, có thể server đã đóng kết nối
                         MessageBox.Show("Disconnected from the server.");
                         break;
                     }
 
                     string message = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim();
+                    Console.WriteLine($"Received: {message}"); // Log thông điệp nhận được
 
-                    // Separate handling for USERLIST and chat messages
                     if (message.StartsWith("USERLIST:"))
                     {
-                        // Update user list without blinking effect on txtChatDisplay
                         UpdateUserList(message.Substring(9));
                     }
                     else if (message == $"Login Success{username}")
@@ -108,13 +110,12 @@ namespace ChatClient
                     }
                     else
                     {
-                        // Handle regular chat messages
                         AppendMessageToChatDisplay(message);
                     }
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
-                    MessageBox.Show("Disconnected from the server.");
+                    MessageBox.Show("Disconnected from the server. IOException: " + ex.Message);
                     break;
                 }
                 catch (Exception ex)
@@ -125,6 +126,7 @@ namespace ChatClient
             }
         }
 
+
         private void AppendMessageToChatDisplay(string message)
         {
             if (InvokeRequired)
@@ -132,38 +134,31 @@ namespace ChatClient
                 Invoke((MethodInvoker)(() =>
                 {
                     txtChatDisplay.AppendText(message + Environment.NewLine);
-
                 }));
             }
             else
             {
                 txtChatDisplay.AppendText(message + Environment.NewLine);
-
             }
         }
-
 
         private void UpdateUserList(string userList)
         {
             Invoke((MethodInvoker)(() =>
             {
-                cmbUsers.Items.Clear();
-                // Split by commas and remove any empty or whitespace entries
-                string[] users = userList.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                cmbUsers.Items.Clear(); // Xóa danh sách người dùng cũ
+                string[] users = userList.Split(',');
                 foreach (string user in users)
                 {
-                    string trimmedUser = user.Trim();
-                    if (!string.IsNullOrEmpty(trimmedUser) && trimmedUser != username) // Don't show the current user
-                    {
-                        cmbUsers.Items.Add(trimmedUser);
-                    }
+                    if (user != username) // Không thêm chính người dùng hiện tại
+                        cmbUsers.Items.Add(user);
                 }
             }));
         }
 
-
         private void ChatForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // Gửi thông báo đăng xuất và đóng kết nối TcpClient
             SendMessage($"LOGOUT:{username}");
             client.Close();
         }

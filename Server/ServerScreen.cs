@@ -35,10 +35,10 @@ namespace ChatServer
 
         private void StartServer()
         {
-            listener = new TcpListener(IPAddress.Any, 5000);
+            listener = new TcpListener(IPAddress.Any, 8888); // Localhost IP only
             listener.Start();
             isRunning = true;
-            OnLogMessage?.Invoke("Server started...");
+            OnLogMessage?.Invoke("Server started on local network...");
 
             Task.Run(() =>
             {
@@ -47,7 +47,7 @@ namespace ChatServer
                     try
                     {
                         TcpClient client = listener.AcceptTcpClient();
-                        Task.Run(() => HandleClient(client)); // Xử lý kết nối client
+                        Task.Run(() => HandleClient(client)); // Handle client connection
                     }
                     catch (Exception ex)
                     {
@@ -70,13 +70,20 @@ namespace ChatServer
             {
                 NetworkStream stream = client.GetStream();
                 byte[] buffer = new byte[1024];
-                int byteCount;
 
-                while ((byteCount = stream.Read(buffer, 0, buffer.Length)) > 0)
+                while (client.Connected) // Thêm vòng lặp để duy trì kết nối
                 {
-                    string data = Encoding.ASCII.GetString(buffer, 0, byteCount);
-                    OnLogMessage?.Invoke($"Received data from client: {data}"); // Log incoming data
+                    int byteCount = stream.Read(buffer, 0, buffer.Length);
+                    if (byteCount == 0)
+                    {
+                        // Client đã đóng kết nối
+                        break;
+                    }
 
+                    string data = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim();
+                    OnLogMessage?.Invoke($"Received data from client: {data}"); // Ghi nhật ký dữ liệu nhận được
+
+                    // Phân loại các loại yêu cầu từ client
                     if (data.StartsWith("LOGIN:"))
                     {
                         HandleLogin(client, data);
@@ -88,10 +95,11 @@ namespace ChatServer
                     else if (data.StartsWith("LOGOUT:"))
                     {
                         HandleLogout(client);
+                        break; // Ngừng vòng lặp nếu client yêu cầu đăng xuất
                     }
                     else
                     {
-                        BroadcastMessage(data, client); // Broadcast the message to other clients
+                        BroadcastMessage(data, client); // Gửi tin nhắn tới các client khác
                     }
                 }
             }
@@ -101,7 +109,7 @@ namespace ChatServer
             }
             finally
             {
-                client.Close(); // Close the client connection after handling
+                client.Close(); // Đóng kết nối khi client ngắt
             }
         }
 
@@ -251,7 +259,6 @@ namespace ChatServer
 
 
         // Phát tin nhắn tới tất cả các client ngoại trừ client gửi
-        // Broadcast a message to all clients except the sender
         // Modify the BroadcastMessage method to handle both private and public messages.
         private void BroadcastMessage(string message, TcpClient sender)
         {
@@ -315,7 +322,6 @@ namespace ChatServer
                 OnLogMessage?.Invoke($"User {recipient} is not available for private messages.");
             }
         }
-
 
 
         // Cập nhật danh sách người dùng online
