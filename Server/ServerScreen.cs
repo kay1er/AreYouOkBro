@@ -265,8 +265,22 @@ namespace ChatServer
         // Ghi lại thông báo vào log
         private void LogMessage(string message)
         {
-            txtLog.AppendText($"{message}{Environment.NewLine}"); // Ghi thêm thông báo vào ô văn bản của giao diện
+            // Kiểm tra xem có cần phải gọi Invoke để cập nhật trên UI thread hay không
+            if (txtMessageLog.InvokeRequired)
+            {
+                // Nếu cần, sử dụng Invoke để cập nhật nội dung trên UI thread
+                txtMessageLog.Invoke(new Action<string>((msg) =>
+                {
+                    txtMessageLog.AppendText($"{msg}{Environment.NewLine}");
+                }), message);
+            }
+            else
+            {
+                // Nếu đang ở UI thread, thực hiện ngay
+                txtMessageLog.AppendText($"{message}{Environment.NewLine}");
+            }
         }
+
 
         // Cập nhật danh sách người dùng online
         private void BroadcastUserList()
