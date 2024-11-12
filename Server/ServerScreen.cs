@@ -11,192 +11,191 @@ namespace ChatServer
 {
     public partial class ServerScreen : Form
     {
-        private TcpListener listener;
-        private bool isRunning;
-        private Dictionary<string, TcpClient> connectedClients = new Dictionary<string, TcpClient>();
+        private TcpListener listener; // Khai báo TcpListener để lắng nghe kết nối từ client
+        private bool isRunning; // Biến kiểm tra trạng thái server (đang chạy hay không)
+        private Dictionary<string, TcpClient> connectedClients = new Dictionary<string, TcpClient>(); // Lưu trữ các client đã kết nối
 
-        public event Action<string> OnLogMessage;
+        public event Action<string> OnLogMessage; // Sự kiện ghi lại nhật ký hoạt động của server
 
         public ServerScreen()
         {
-            InitializeComponent();
+            InitializeComponent(); // Khởi tạo các thành phần trên giao diện
             OnLogMessage += LogMessage; // Đăng ký sự kiện ghi nhật ký
         }
 
         private void ServerScreen_Load(object sender, EventArgs e)
         {
-            StartServer(); // Khởi động server khi form load
+            StartServer(); // Khi form được load, khởi động server
         }
 
         private void ServerScreen_FormClosing(object sender, FormClosingEventArgs e)
         {
-            StopServer(); // Dừng server khi form đóng
+            StopServer(); // Dừng server khi form bị đóng
         }
 
+        // Hàm khởi động server, bắt đầu lắng nghe kết nối từ các client
         private void StartServer()
         {
-            listener = new TcpListener(IPAddress.Any, 8888); // Localhost IP only
-            listener.Start();
-            isRunning = true;
-            OnLogMessage?.Invoke("Server started on local network...");
+            listener = new TcpListener(IPAddress.Any, 8888); // Lắng nghe kết nối từ bất kỳ địa chỉ IP nào trên cổng 8888
+            listener.Start(); // Bắt đầu quá trình lắng nghe
+            isRunning = true; // Đánh dấu rằng server đang hoạt động
+            OnLogMessage?.Invoke("Server started on local network..."); // Ghi nhật ký khi server khởi động thành công
 
             Task.Run(() =>
             {
-                while (isRunning)
+                while (isRunning) // Tiếp tục lắng nghe kết nối nếu server vẫn còn chạy
                 {
                     try
                     {
-                        TcpClient client = listener.AcceptTcpClient();
-                        Task.Run(() => HandleClient(client)); // Handle client connection
+                        TcpClient client = listener.AcceptTcpClient(); // Chấp nhận kết nối từ client
+                        Task.Run(() => HandleClient(client)); // Xử lý client trong một task riêng biệt
                     }
                     catch (Exception ex)
                     {
-                        OnLogMessage?.Invoke($"Error accepting client: {ex.Message}");
+                        OnLogMessage?.Invoke($"Error accepting client: {ex.Message}"); // Ghi nhật ký khi có lỗi khi nhận kết nối
                     }
                 }
             });
         }
 
+        // Hàm dừng server
         private void StopServer()
         {
-            isRunning = false;
-            listener?.Stop();
-            OnLogMessage?.Invoke("Server stopped.");
+            isRunning = false; // Dừng server
+            listener?.Stop(); // Dừng TcpListener
+            OnLogMessage?.Invoke("Server stopped."); // Ghi nhật ký khi server dừng
         }
 
+        // Xử lý client khi có kết nối
         private void HandleClient(TcpClient client)
         {
             try
             {
-                NetworkStream stream = client.GetStream();
-                byte[] buffer = new byte[1024];
+                NetworkStream stream = client.GetStream(); // Lấy luồng dữ liệu mạng
+                byte[] buffer = new byte[1024]; // Khai báo bộ đệm để nhận dữ liệu
 
-                while (client.Connected) // Thêm vòng lặp để duy trì kết nối
+                while (client.Connected) // Tiếp tục xử lý khi client vẫn còn kết nối
                 {
-                    int byteCount = stream.Read(buffer, 0, buffer.Length);
+                    int byteCount = stream.Read(buffer, 0, buffer.Length); // Đọc dữ liệu từ client
                     if (byteCount == 0)
                     {
-                        // Client đã đóng kết nối
+                        // Nếu không nhận được dữ liệu (client ngắt kết nối)
                         break;
                     }
 
-                    string data = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim();
-                    OnLogMessage?.Invoke($"Received data from client: {data}"); // Ghi nhật ký dữ liệu nhận được
+                    string data = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim(); // Chuyển đổi dữ liệu byte thành chuỗi
+                    OnLogMessage?.Invoke($"Received data from client: {data}"); // Ghi nhật ký khi nhận dữ liệu từ client
 
-                    // Phân loại các loại yêu cầu từ client
+                    // Phân tích dữ liệu và thực hiện các hành động tương ứng
                     if (data.StartsWith("LOGIN:"))
                     {
-                        HandleLogin(client, data);
+                        HandleLogin(client, data); // Xử lý đăng nhập
                     }
                     else if (data.StartsWith("REGISTER:"))
                     {
-                        HandleRegister(client, data);
+                        HandleRegister(client, data); // Xử lý đăng ký
                     }
                     else if (data.StartsWith("LOGOUT:"))
                     {
-                        HandleLogout(client);
-                        break; // Ngừng vòng lặp nếu client yêu cầu đăng xuất
+                        HandleLogout(client); // Xử lý đăng xuất
+                        break; // Dừng vòng lặp khi client đăng xuất
                     }
                     else
                     {
-                        BroadcastMessage(data, client); // Gửi tin nhắn tới các client khác
+                        BroadcastMessage(data, client); // Phát tin nhắn cho tất cả client khác
                     }
                 }
             }
             catch (Exception ex)
             {
-                OnLogMessage?.Invoke($"Error handling client: {ex.Message}");
+                OnLogMessage?.Invoke($"Error handling client: {ex.Message}"); // Ghi nhật ký khi có lỗi khi xử lý client
             }
             finally
             {
-                client.Close(); // Đóng kết nối khi client ngắt
+                client.Close(); // Đóng kết nối với client sau khi xử lý xong
             }
         }
 
-
-        // Xử lý đăng nhập
+        // Xử lý đăng nhập từ client
         private void HandleLogin(TcpClient client, string data)
         {
-            string[] parts = data.Split(':');
+            string[] parts = data.Split(':'); // Tách dữ liệu theo dấu ':'
 
-            // Kiểm tra nếu có ít nhất 2 phần (LOGIN và username), mật khẩu có thể không có
             if (parts.Length < 2 || parts.Length > 3)
             {
                 SendMessage(client, "Invalid login format. Please use the format: LOGIN:username:password (password optional)");
-                OnLogMessage?.Invoke($"Invalid login format: {data}");
+                OnLogMessage?.Invoke($"Invalid login format: {data}"); // Ghi nhật ký khi định dạng đăng nhập không hợp lệ
                 return;
             }
 
-            string username = parts[1];
-            string password = parts.Length == 3 ? parts[2] : null; // Nếu có mật khẩu, lấy mật khẩu, nếu không thì null
+            string username = parts[1]; // Lấy tên người dùng
+            string password = parts.Length == 3 ? parts[2] : null; // Lấy mật khẩu nếu có
 
             if (AuthenticateUser(username, password))
             {
-                connectedClients[username] = client;
-                SendMessage(client, "Login Success");
-                OnLogMessage?.Invoke($"User {username} logged in successfully.");
-                BroadcastUserList();
+                connectedClients[username] = client; // Thêm client vào danh sách kết nối
+                SendMessage(client, "Login Success"); // Gửi thông báo đăng nhập thành công
+                OnLogMessage?.Invoke($"User {username} logged in successfully."); // Ghi nhật ký khi đăng nhập thành công
+                BroadcastUserList(); // Cập nhật danh sách người dùng online
             }
             else
             {
-                SendMessage(client, "Login Failed");
-                OnLogMessage?.Invoke($"Login failed for user {username}.");
+                SendMessage(client, "Login Failed"); // Gửi thông báo đăng nhập thất bại
+                OnLogMessage?.Invoke($"Login failed for user {username}."); // Ghi nhật ký khi đăng nhập thất bại
             }
         }
 
-
-
-
-        // Xử lý đăng ký
+        // Xử lý đăng ký người dùng
         private void HandleRegister(TcpClient client, string data)
         {
             string[] parts = data.Split(':');
-            string username = parts[1];
-            string password = parts[2];
+            string username = parts[1]; // Lấy tên người dùng
+            string password = parts[2]; // Lấy mật khẩu
 
             if (RegisterUser(username, password))
             {
-                SendMessage(client, "Register Success");
-                OnLogMessage?.Invoke($"User {username} registered successfully.");
+                SendMessage(client, "Register Success"); // Gửi thông báo đăng ký thành công
+                OnLogMessage?.Invoke($"User {username} registered successfully."); // Ghi nhật ký khi đăng ký thành công
             }
             else
             {
-                SendMessage(client, "Register Failed");
-                OnLogMessage?.Invoke($"Registration failed for user {username}.");
+                SendMessage(client, "Register Failed"); // Gửi thông báo đăng ký thất bại
+                OnLogMessage?.Invoke($"Registration failed for user {username}."); // Ghi nhật ký khi đăng ký thất bại
             }
         }
 
-        // Xử lý đăng xuất
+        // Xử lý đăng xuất người dùng
         private void HandleLogout(TcpClient client)
         {
-            string username = GetUsername(client);
+            string username = GetUsername(client); // Lấy tên người dùng từ kết nối
             if (username != null)
             {
-                connectedClients.Remove(username);
-                BroadcastUserList(); // Cập nhật danh sách người dùng
-                OnLogMessage?.Invoke($"User {username} logged out.");
+                connectedClients.Remove(username); // Xóa client khỏi danh sách kết nối
+                BroadcastUserList(); // Cập nhật lại danh sách người dùng online
+                OnLogMessage?.Invoke($"User {username} logged out."); // Ghi nhật ký khi người dùng đăng xuất
             }
         }
 
-        // Kiểm tra đăng nhập người dùng
+        // Xác thực người dùng trong cơ sở dữ liệu
         private bool AuthenticateUser(string username, string password)
         {
-            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
+            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True"; // Chuỗi kết nối cơ sở dữ liệu
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                conn.Open();
-                OnLogMessage?.Invoke("Connected to database for authentication."); // Kiểm tra kết nối
+                conn.Open(); // Mở kết nối tới cơ sở dữ liệu
+                OnLogMessage?.Invoke("Connected to database for authentication."); // Ghi nhật ký khi kết nối cơ sở dữ liệu thành công
 
                 string query;
                 SqlCommand cmd;
 
-                if (string.IsNullOrEmpty(password)) // Nếu không có mật khẩu, chỉ kiểm tra username
+                // Kiểm tra nếu mật khẩu không có, chỉ kiểm tra tên người dùng
+                if (string.IsNullOrEmpty(password))
                 {
                     query = "SELECT COUNT(1) FROM Users WHERE Username = @username";
                     cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@username", username);
                 }
-                else // Nếu có mật khẩu, kiểm tra cả username và password
+                else
                 {
                     query = "SELECT COUNT(1) FROM Users WHERE Username = @username AND Password = @password";
                     cmd = new SqlCommand(query, conn);
@@ -204,29 +203,46 @@ namespace ChatServer
                     cmd.Parameters.AddWithValue("@password", password);
                 }
 
-                int result = (int)cmd.ExecuteScalar();
-                OnLogMessage?.Invoke($"Authentication result: {result}"); // Kiểm tra kết quả
+                int result = (int)cmd.ExecuteScalar(); // Thực thi truy vấn và nhận kết quả
+                OnLogMessage?.Invoke($"Authentication result: {result}"); // Ghi nhật ký kết quả kiểm tra đăng nhập
 
-                return result == 1;
+                return result == 1; // Nếu kết quả là 1, người dùng tồn tại và đăng nhập thành công
             }
         }
 
-
-        // Xử lý đăng ký người dùng mới
+        // Đăng ký người dùng mới vào cơ sở dữ liệu
         private bool RegisterUser(string username, string password)
         {
-            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True";
+            string connectionString = "Server=kay1er;Database=UserData;Trusted_Connection=True"; // Chuỗi kết nối cơ sở dữ liệu
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                conn.Open();
-                string query = "INSERT INTO Users (Username, Password) VALUES (@username, @password)";
+                conn.Open(); // Mở kết nối
+                string query = "INSERT INTO Users (Username, Password) VALUES (@username, @password)"; // Truy vấn thêm người dùng mới vào bảng
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@username", username);
-                    cmd.Parameters.AddWithValue("@password", password);
+                    cmd.Parameters.AddWithValue("@username", username); // Thêm tên người dùng vào câu lệnh
+                    cmd.Parameters.AddWithValue("@password", password); // Thêm mật khẩu vào câu lệnh
+                    try
+                    {
+                        cmd.ExecuteNonQuery(); // Thực thi câu lệnh SQL để thêm người dùng mới
+                        return true; // Nếu thêm thành công, trả về true
+                    }
+                    catch (Exception)
+                    {
+                        return false; // Nếu có lỗi, trả về false
+                    }
+                }
+            }
+        }
 
-                    int result = cmd.ExecuteNonQuery();
-                    return result > 0;
+        // Phát tin nhắn cho tất cả client
+        private void BroadcastMessage(string message, TcpClient senderClient)
+        {
+            foreach (var client in connectedClients)
+            {
+                if (client.Value != senderClient)
+                {
+                    SendMessage(client.Value, message); // Gửi tin nhắn cho tất cả client ngoại trừ người gửi
                 }
             }
         }
@@ -236,155 +252,43 @@ namespace ChatServer
         {
             try
             {
-                if (client.Connected)  // Kiểm tra xem client còn kết nối không
-                {
-                    NetworkStream stream = client.GetStream();
-                    byte[] data = Encoding.ASCII.GetBytes(message);
-                    stream.Write(data, 0, data.Length);
-                }
-                else
-                {
-                    OnLogMessage?.Invoke($"Client {client.Client.RemoteEndPoint} disconnected.");
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                OnLogMessage?.Invoke("Tried to send message to a disposed client.");
+                NetworkStream stream = client.GetStream();
+                byte[] buffer = Encoding.ASCII.GetBytes(message);
+                stream.Write(buffer, 0, buffer.Length); // Gửi dữ liệu
             }
             catch (Exception ex)
             {
-                OnLogMessage?.Invoke($"Error sending message: {ex.Message}");
+                OnLogMessage?.Invoke($"Error sending message: {ex.Message}"); // Ghi nhật ký khi có lỗi khi gửi tin nhắn
             }
         }
 
-
-        // Phát tin nhắn tới tất cả các client ngoại trừ client gửi
-        // Modify the BroadcastMessage method to handle both private and public messages.
-        private void BroadcastMessage(string message, TcpClient sender)
+        // Ghi lại thông báo vào log
+        private void LogMessage(string message)
         {
-            // Check if the message is a private message by checking the prefix.
-            if (message.StartsWith("PRIVATE:"))
-            {
-                string[] parts = message.Split(new[] { ':' }, 3);
-                if (parts.Length == 3)
-                {
-                    string recipient = parts[1];
-                    string privateMessage = parts[2];
-                    SendPrivateMessage(privateMessage, sender, recipient);
-                    return;
-                }
-            }
-
-            // Handle public message by broadcasting to all clients except the sender.
-            byte[] buffer = Encoding.UTF8.GetBytes(message);
-            foreach (var client in connectedClients.Values)
-            {
-                if (client != sender && client.Connected)
-                {
-                    try
-                    {
-                        NetworkStream stream = client.GetStream();
-                        stream.Write(buffer, 0, buffer.Length);
-                    }
-                    catch (Exception ex)
-                    {
-                        OnLogMessage?.Invoke($"Error sending broadcast message: {ex.Message}");
-                    }
-                }
-            }
-            OnLogMessage?.Invoke("Broadcasting message: " + message);
+            txtLog.AppendText($"{message}{Environment.NewLine}"); // Ghi thêm thông báo vào ô văn bản của giao diện
         }
-
-        // Method to send a private message to a specific recipient
-        private void SendPrivateMessage(string message, TcpClient sender, string recipient)
-        {
-            if (connectedClients.TryGetValue(recipient, out TcpClient recipientClient) && recipientClient.Connected)
-            {
-                string senderName = GetUsername(sender);
-                string formattedMessage = $"PRIVATE FROM {senderName}: {message}";
-                byte[] buffer = Encoding.UTF8.GetBytes(formattedMessage);
-
-                try
-                {
-                    NetworkStream stream = recipientClient.GetStream();
-                    stream.Write(buffer, 0, buffer.Length);
-                    OnLogMessage?.Invoke($"Private message from {senderName} to {recipient}: {message}");
-                }
-                catch (Exception ex)
-                {
-                    OnLogMessage?.Invoke($"Error sending private message: {ex.Message}");
-                }
-            }
-            else
-            {
-                // Notify sender if the recipient is not found or disconnected
-                SendMessage(sender, $"User {recipient} is not available.");
-                OnLogMessage?.Invoke($"User {recipient} is not available for private messages.");
-            }
-        }
-
 
         // Cập nhật danh sách người dùng online
         private void BroadcastUserList()
         {
-            string userList = "USERLIST:" + string.Join(",", connectedClients.Keys);
-            List<TcpClient> clientsToRemove = new List<TcpClient>(); // Danh sách các client sẽ bị xóa
-
+            string userList = "USERLIST:" + string.Join(",", connectedClients.Keys); // Tạo chuỗi danh sách người dùng
             foreach (var client in connectedClients.Values)
             {
-                try
-                {
-                    // Kiểm tra kết nối client trước khi gửi tin nhắn
-                    if (client.Connected)
-                    {
-                        SendMessage(client, userList);
-                    }
-                    else
-                    {
-                        clientsToRemove.Add(client); // Thêm client vào danh sách cần xóa
-                    }
-                }
-                catch (Exception ex)
-                {
-                    OnLogMessage?.Invoke($"Error sending message to client: {ex.Message}");
-                }
+                SendMessage(client, userList); // Gửi danh sách người dùng cho tất cả client
             }
-
-            // Xóa những client không còn kết nối
-            foreach (var client in clientsToRemove)
-            {
-                string username = GetUsername(client);
-                if (username != null)
-                {
-                    connectedClients.Remove(username);
-                }
-            }
-
-            OnLogMessage?.Invoke("Updated user list broadcasted.");
         }
 
-
-        // Lấy tên người dùng từ kết nối
+        // Lấy tên người dùng từ TcpClient
         private string GetUsername(TcpClient client)
         {
-            foreach (var entry in connectedClients)
+            foreach (var kvp in connectedClients)
             {
-                if (entry.Value == client) return entry.Key;
+                if (kvp.Value == client)
+                {
+                    return kvp.Key; // Trả về tên người dùng tương ứng
+                }
             }
-            return null;
-        }
-
-        // Ghi nhật ký vào giao diện
-        private void LogMessage(string message)
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action<string>(LogMessage), message);
-            }
-            else
-            {
-                txtMessageLog.AppendText($"{message}{Environment.NewLine}");
-            }
+            return null; // Nếu không tìm thấy, trả về null
         }
     }
 }
