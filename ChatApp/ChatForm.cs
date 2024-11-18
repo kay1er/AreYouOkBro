@@ -8,68 +8,66 @@ namespace ChatClient
 {
     public partial class ChatForm : Form
     {
-        private TcpClient client; // Đối tượng TcpClient để kết nối tới server
-        private NetworkStream stream; // Luồng mạng để gửi và nhận dữ liệu
-        private string username; // Tên người dùng hiện tại
+        private TcpClient client;
+        private NetworkStream stream;
+        private string username;
 
         public ChatForm()
         {
-            InitializeComponent(); // Khởi tạo các thành phần giao diện
+            InitializeComponent();
         }
 
         private void btnLogin_Click(object sender, EventArgs e)
         {
-            username = txtboxAccount.Text.Trim(); // Lấy tên người dùng từ ô nhập liệu
+            username = txtboxAccount.Text.Trim();
 
-            if (string.IsNullOrEmpty(username)) // Kiểm tra tên người dùng có trống không
+            if (string.IsNullOrEmpty(username))
             {
-                MessageBox.Show("Hãy nhập tên người dùng"); // Hiển thị thông báo nếu tên trống
+                MessageBox.Show("Please enter a username.");
                 return;
             }
 
             try
             {
-                // Kết nối tới server cục bộ (localhost) tại cổng 5000
-                client = new TcpClient("192.168.1.99", 5000);
-                stream = client.GetStream(); // Lấy luồng mạng để giao tiếp với server
+                // Kết nối tới server
+                client = new TcpClient("192.168.1.153", 5000);
+                stream = client.GetStream();
 
                 // Gửi thông báo login tới server
                 SendMessage($"LOGIN:{username}");
 
-                // Thêm username của người dùng vào ComboBox để hiển thị danh sách người dùng
+                // Thêm username vào ComboBox
                 cmbUsers.Items.Add(username);
                 cmbUsers.SelectedItem = username;
 
-                // Kích hoạt chế độ nhận tin nhắn
+                // Kích hoạt chế độ chat
                 Task.Run(() => ReceiveMessages());
-                MessageBox.Show("Đăng nhập thành công!"); // Hiển thị thông báo đăng nhập thành công
+                MessageBox.Show("Login successful!");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi kết nối tới server: {ex.Message}"); // Hiển thị lỗi nếu kết nối thất bại
+                MessageBox.Show($"Failed to connect to server: {ex.Message}");
             }
         }
 
         private void btnSend_Click(object sender, EventArgs e)
         {
-            string message = txtChatInput.Text.Trim(); // Lấy nội dung tin nhắn từ ô nhập liệu
-
-            if (!string.IsNullOrEmpty(message)) // Kiểm tra tin nhắn có trống không
+            string message = txtChatInput.Text.Trim();
+            if (!string.IsNullOrEmpty(message))
             {
-                string selectedUser = cmbUsers.SelectedItem?.ToString(); // Lấy người dùng được chọn trong ComboBox
+                string selectedUser = cmbUsers.SelectedItem?.ToString();
 
-                if (!string.IsNullOrEmpty(selectedUser)) // Kiểm tra người dùng được chọn có hợp lệ không
+                if (!string.IsNullOrEmpty(selectedUser))
                 {
-                    // Gửi tin nhắn riêng tư tới người dùng được chọn
                     SendMessage($"PRIVATE:{selectedUser}:{message}");
-                    txtChatDisplay.AppendText($"To {selectedUser}: {message}" + Environment.NewLine); // Hiển thị tin nhắn đã gửi
+                    txtChatDisplay.AppendText($"To {selectedUser}: {message}" + Environment.NewLine);
                 }
                 else
                 {
-                    MessageBox.Show("Hãy chọn người dùng để nhắn tin"); // Yêu cầu chọn người dùng nếu chưa chọn
+                    MessageBox.Show("Please select a user to send a private message.");
                 }
 
-                txtChatInput.Clear(); // Xóa nội dung ô nhập liệu sau khi gửi
+                txtChatInput.Clear();
             }
         }
 
@@ -77,48 +75,47 @@ namespace ChatClient
         {
             try
             {
-                if (client != null && client.Connected) // Kiểm tra kết nối có hoạt động không
+                if (client != null && client.Connected)
                 {
-                    byte[] data = Encoding.ASCII.GetBytes(message); // Mã hóa tin nhắn thành byte
-                    stream.Write(data, 0, data.Length); // Gửi dữ liệu qua luồng mạng
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
                 }
                 else
                 {
-                    MessageBox.Show("Đã ngắt kết nối khỏi server"); // Thông báo nếu mất kết nối
-                    Close(); // Đóng form nếu mất kết nối
+                    MessageBox.Show("Disconnected from server.");
+                    Close();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}"); // Hiển thị lỗi nếu xảy ra
+                MessageBox.Show($"Error: {ex.Message}");
             }
         }
 
         private async Task ReceiveMessages()
         {
-            byte[] buffer = new byte[1024]; // Bộ đệm để lưu dữ liệu nhận được
-            while (client != null && client.Connected) // Lặp lại khi kết nối còn hoạt động
+            byte[] buffer = new byte[1024];
+            while (client != null && client.Connected)
             {
                 try
                 {
-                    // Đọc dữ liệu từ server
                     int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (byteCount == 0) break; // Ngắt nếu không nhận được dữ liệu
+                    if (byteCount == 0) break;
 
-                    string message = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim(); // Chuyển đổi dữ liệu thành chuỗi
+                    string message = Encoding.ASCII.GetString(buffer, 0, byteCount).Trim();
 
-                    if (message.StartsWith("Danh sách người dùng:")) // Kiểm tra nếu tin nhắn là danh sách người dùng
+                    if (message.StartsWith("USERLIST:"))
                     {
-                        UpdateUserList(message.Substring(9)); // Cập nhật danh sách người dùng
+                        UpdateUserList(message.Substring(9));
                     }
                     else
                     {
-                        AppendMessage(message); // Thêm tin nhắn vào khung hiển thị
+                        AppendMessage(message);
                     }
                 }
                 catch (Exception)
                 {
-                    MessageBox.Show("Đã ngắt kết nối khỏi server."); // Hiển thị thông báo nếu mất kết nối
+                    MessageBox.Show("Disconnected from server.");
                     break;
                 }
             }
@@ -126,7 +123,6 @@ namespace ChatClient
 
         private void AppendMessage(string message)
         {
-            // Thêm tin nhắn vào khung hiển thị với giao diện chính
             Invoke((MethodInvoker)(() =>
             {
                 txtChatDisplay.AppendText(message + Environment.NewLine);
@@ -135,14 +131,13 @@ namespace ChatClient
 
         private void UpdateUserList(string userList)
         {
-            // Cập nhật danh sách người dùng từ chuỗi nhận được
             Invoke((MethodInvoker)(() =>
             {
-                cmbUsers.Items.Clear(); // Xóa danh sách cũ
-                string[] users = userList.Split(','); // Phân tách người dùng
+                cmbUsers.Items.Clear();
+                string[] users = userList.Split(',');
                 foreach (string user in users)
                 {
-                    if (!string.IsNullOrEmpty(user) && user != username) // Không thêm chính mình vào danh sách
+                    if (!string.IsNullOrEmpty(user) && user != username)
                     {
                         cmbUsers.Items.Add(user);
                     }
@@ -152,10 +147,10 @@ namespace ChatClient
 
         private void ChatForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (client != null && client.Connected) // Kiểm tra kết nối có hoạt động không
+            if (client != null && client.Connected)
             {
-                SendMessage($"LOGOUT:{username}"); // Gửi thông báo logout tới server
-                client.Close(); // Đóng kết nối
+                SendMessage($"LOGOUT:{username}");
+                client.Close();
             }
         }
     }
