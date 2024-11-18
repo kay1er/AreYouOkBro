@@ -32,7 +32,7 @@ namespace ChatClient
             try
             {
                 // Kết nối tới server
-                client = new TcpClient("192.168.1.153", 5000);
+                client = new TcpClient("172.20.10.2", 5000);
                 stream = client.GetStream(); // Lấy luồng dữ liệu từ client
 
                 // Gửi thông báo đăng nhập tới server
