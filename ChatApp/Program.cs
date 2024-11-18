@@ -1,6 +1,6 @@
-﻿using System;
+﻿using ChatClient;
+using System;
 using System.Windows.Forms;
-using ChatClient; // Add this if LoginForm is in ChatClient
 
 namespace ChatApp
 {
@@ -11,7 +11,9 @@ namespace ChatApp
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ChatClient.LoginForm()); // Specify full namespace if needed
+
+            // Mở ChatForm trực tiếp
+            Application.Run(new ChatForm());
         }
     }
 }
