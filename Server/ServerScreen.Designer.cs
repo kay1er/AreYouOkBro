@@ -33,19 +33,22 @@
             // 
             // txtMessageLog
             // 
+            this.txtMessageLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.txtMessageLog.Location = new System.Drawing.Point(58, 51);
             this.txtMessageLog.Multiline = true;
             this.txtMessageLog.Name = "txtMessageLog";
             this.txtMessageLog.ReadOnly = true;
             this.txtMessageLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtMessageLog.Size = new System.Drawing.Size(399, 303);
+            this.txtMessageLog.Size = new System.Drawing.Size(457, 264);
             this.txtMessageLog.TabIndex = 0;
             // 
             // ServerScreen
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(527, 450);
+            this.ClientSize = new System.Drawing.Size(585, 411);
             this.Controls.Add(this.txtMessageLog);
             this.Name = "ServerScreen";
             this.Text = "ServerScreen";

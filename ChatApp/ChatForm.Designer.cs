@@ -40,25 +40,31 @@
             // 
             // txtChatInput
             // 
-            this.txtChatInput.Location = new System.Drawing.Point(52, 283);
+            this.txtChatInput.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtChatInput.Location = new System.Drawing.Point(52, 294);
             this.txtChatInput.Name = "txtChatInput";
-            this.txtChatInput.Size = new System.Drawing.Size(385, 20);
+            this.txtChatInput.Size = new System.Drawing.Size(433, 20);
             this.txtChatInput.TabIndex = 0;
             // 
             // txtChatDisplay
             // 
+            this.txtChatDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.txtChatDisplay.Location = new System.Drawing.Point(52, 79);
             this.txtChatDisplay.Multiline = true;
             this.txtChatDisplay.Name = "txtChatDisplay";
             this.txtChatDisplay.ReadOnly = true;
-            this.txtChatDisplay.Size = new System.Drawing.Size(385, 198);
+            this.txtChatDisplay.Size = new System.Drawing.Size(433, 207);
             this.txtChatDisplay.TabIndex = 1;
             // 
             // btnSend
             // 
-            this.btnSend.Location = new System.Drawing.Point(362, 309);
+            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSend.Location = new System.Drawing.Point(408, 319);
             this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(75, 23);
+            this.btnSend.Size = new System.Drawing.Size(76, 23);
             this.btnSend.TabIndex = 2;
             this.btnSend.Text = "Send";
             this.btnSend.UseVisualStyleBackColor = true;
@@ -66,11 +72,13 @@
             // 
             // cmbUsers
             // 
+            this.cmbUsers.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbUsers.FormattingEnabled = true;
             this.cmbUsers.Location = new System.Drawing.Point(52, 22);
-            this.cmbUsers.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.cmbUsers.Margin = new System.Windows.Forms.Padding(2);
             this.cmbUsers.Name = "cmbUsers";
-            this.cmbUsers.Size = new System.Drawing.Size(106, 21);
+            this.cmbUsers.Size = new System.Drawing.Size(209, 21);
             this.cmbUsers.TabIndex = 3;
             // 
             // label1
@@ -95,14 +103,17 @@
             // 
             // txtboxAccount
             // 
+            this.txtboxAccount.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.txtboxAccount.Location = new System.Drawing.Point(52, 53);
             this.txtboxAccount.Name = "txtboxAccount";
-            this.txtboxAccount.Size = new System.Drawing.Size(385, 20);
+            this.txtboxAccount.Size = new System.Drawing.Size(432, 20);
             this.txtboxAccount.TabIndex = 6;
             // 
             // btnLogin
             // 
-            this.btnLogin.Location = new System.Drawing.Point(281, 308);
+            this.btnLogin.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnLogin.Location = new System.Drawing.Point(328, 319);
             this.btnLogin.Name = "btnLogin";
             this.btnLogin.Size = new System.Drawing.Size(75, 23);
             this.btnLogin.TabIndex = 7;
@@ -114,7 +125,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(485, 343);
+            this.ClientSize = new System.Drawing.Size(533, 352);
             this.Controls.Add(this.btnLogin);
             this.Controls.Add(this.txtboxAccount);
             this.Controls.Add(this.label2);
@@ -125,7 +136,6 @@
             this.Controls.Add(this.txtChatInput);
             this.Name = "ChatForm";
             this.Text = "ChatScreen";
-            this.Load += new System.EventHandler(this.ChatForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,17 +17,10 @@ namespace ChatClient
             InitializeComponent();
         }
 
-        private void ChatForm_Load(object sender, EventArgs e)
-        {
-            Task.Run(() => ReceiveMessages());
-        }
-
         private void btnLogin_Click(object sender, EventArgs e)
         {
-            // Get the username from the TextBox
             username = txtboxAccount.Text.Trim();
 
-            // Validate the username
             if (string.IsNullOrEmpty(username))
             {
                 MessageBox.Show("Please enter a username.");
@@ -37,20 +29,19 @@ namespace ChatClient
 
             try
             {
-                // Connect to the server
-                client = new TcpClient("192.168.1.153", 5000); // Update with the correct server IP
+                // Kết nối tới server
+                client = new TcpClient("192.168.1.153", 5000);
                 stream = client.GetStream();
 
-                // Send login message to server
+                // Gửi thông báo login tới server
                 SendMessage($"LOGIN:{username}");
 
-                // Add the username to the ComboBox (optional)
+                // Thêm username vào ComboBox
                 cmbUsers.Items.Add(username);
                 cmbUsers.SelectedItem = username;
 
-                // Start receiving messages in a separate thread
+                // Kích hoạt chế độ chat
                 Task.Run(() => ReceiveMessages());
-
                 MessageBox.Show("Login successful!");
             }
             catch (Exception ex)
@@ -84,7 +75,7 @@ namespace ChatClient
         {
             try
             {
-                if (client.Connected)
+                if (client != null && client.Connected)
                 {
                     byte[] data = Encoding.ASCII.GetBytes(message);
                     stream.Write(data, 0, data.Length);
@@ -104,7 +95,7 @@ namespace ChatClient
         private async Task ReceiveMessages()
         {
             byte[] buffer = new byte[1024];
-            while (client.Connected)
+            while (client != null && client.Connected)
             {
                 try
                 {
@@ -156,8 +147,11 @@ namespace ChatClient
 
         private void ChatForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            SendMessage($"LOGOUT:{username}");
-            client.Close();
+            if (client != null && client.Connected)
+            {
+                SendMessage($"LOGOUT:{username}");
+                client.Close();
+            }
         }
     }
 }
